@@ -1,24 +1,16 @@
 import React, { useEffect, useCallback, useState, useRef } from 'react';
 import { SafeAreaView, StatusBar, Text, View, ActivityIndicator, TextInput } from 'react-native';
 import { TOKEN_APP_WEATHER } from '@env';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-import {Container, ContainerInputs, Input, NewLocation, IconTemp, Header, TextHeader, TextLoading} from './styles';
+import {Container, ContainerInputs, Input, NewLocation, IconTemp, NameLocation, Header, TextHeader, TextLoading} from './styles';
 
 import Geolocation from '@react-native-community/geolocation';
-
-const addressUser = {
-  city: 'aasdasdas',
-  street: 'aasdasdas',
-  region: 'aasdasdas',
-  country: 'aasdasdas',
-  postalCode: 'aasdasdas',
-  name: 'aasdasdas',
-};
 
 interface UserLocation {
   latitude: Number;
   longitude: Number;
-  address: Object;
+  name: string;
   weather: {
     temperature: string;
     maxTemperature: string;
@@ -36,17 +28,9 @@ const App = () => {
   const logInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
-    Geolocation.getCurrentPosition(
-      position => {
-        const {latitude, longitude} = JSON.stringify(position);
-        handleNewLocation({latitude, longitude});
-      },
-      error => console.log(JSON.stringify(error)),
-      {enableHighAccuracy: true, timeout: 20000, maximumAge: 1000},
-    );
+    Geolocation.getCurrentPosition(({coords: {latitude, longitude}}) => handleNewLocation({latitude, longitude}));
   }, []);
 
-  Geolocation.getCurrentPosition(info => console.log(info));
   // Caso a função seja chamda sem paramêtros, ele vai pegar os valores dos useStates
   const handleNewLocation = useCallback(async ({latitude = Number(lat), longitude = Number(log)}) => {
     const data = await fetch(`http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${TOKEN_APP_WEATHER}&lang=pt_br`).then(response => response.json()).catch(error => {
@@ -54,7 +38,7 @@ const App = () => {
     });
     setUser({
       latitude, longitude,
-      address: addressUser,
+      name: `${data.name} - ${data.sys.country}`,
       weather: {
         temperature: (data.main.temp - 273.15).toFixed(1),
         maxTemperature: (data.main.temp_max - 273.15).toFixed(1),
@@ -63,7 +47,6 @@ const App = () => {
         urlIcon: `http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`,
       }
     });
-    console.log(user);
   }, [lat, log, setLoading]);
 
   return (
@@ -110,9 +93,16 @@ const App = () => {
                     <Text style={{color: '#666'}}>({user.weather.description})</Text>
                   </TextHeader>
                 </Header>
-                <Text>Pais: {user.address.country}</Text>
-                <Text>Cidade: {user.address.city} - {user.address.region}</Text>
-                <Text>Endereço: {user.address.name}</Text>
+
+                <NameLocation>
+                  <Icon
+                    name="location-on"
+                    size={70}
+                    color="#222"
+                  />
+                  <Text style={{fontSize: 24}}>{user.name}</Text>
+                </NameLocation>
+
                 <Text>Latitude: {user.latitude}</Text>
                 <Text>Longitude: {user.longitude}</Text>
               </>

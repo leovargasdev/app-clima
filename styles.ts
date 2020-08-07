@@ -54,3 +54,8 @@ export const NewLocation = styled.TouchableOpacity`
   align-items: center;
   justify-content: center;
 `;
+
+export const NameLocation = styled.View`
+  flex-direction: row;
+  align-items: center;
+`;
