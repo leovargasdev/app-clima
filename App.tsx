@@ -1,11 +1,18 @@
 import React, { useEffect, useCallback, useState, useRef } from 'react';
-import { SafeAreaView, StatusBar, Text, View, ActivityIndicator, TextInput } from 'react-native';
+import { StatusBar, Text, View, ActivityIndicator, TextInput } from 'react-native';
 import { TOKEN_APP_WEATHER } from '@env';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-
-import {Container, ContainerInputs, Input, NewLocation, IconTemp, NameLocation, Header, TextHeader, TextLoading} from './styles';
-
 import Geolocation from '@react-native-community/geolocation';
+
+import {
+  Container,
+  ContainerInputs,
+  Input,
+  NewLocation,
+  Temperature,
+  TemperatureIcon,
+  NameLocation
+} from './styles';
 
 interface UserLocation {
   latitude: Number;
@@ -24,18 +31,25 @@ const App = () => {
   const [user, setUser] = useState<UserLocation>();
   const [loading, setLoading] = useState(false);
   const [lat, setLat] = useState('');
-  const [log, setLog] = useState('');
+  const [long, setLong] = useState('');
   const logInputRef = useRef<TextInput>(null);
 
   useEffect(() => {
-    Geolocation.getCurrentPosition(({coords: {latitude, longitude}}) => handleNewLocation({latitude, longitude}));
-  }, []);
-
-  // Caso a função seja chamda sem paramêtros, ele vai pegar os valores dos useStates
-  const handleNewLocation = useCallback(async ({latitude = Number(lat), longitude = Number(log)}) => {
-    const data = await fetch(`http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${TOKEN_APP_WEATHER}&lang=pt_br`).then(response => response.json()).catch(error => {
-      console.error(error);
+    Geolocation.getCurrentPosition(({coords: {latitude, longitude}}) => {
+      setLat(latitude.toFixed(4).toString());
+      setLong(longitude.toFixed(4).toString());
+      handleNewLocation();
     });
+  }, []);
+  // Atualizando dados climaticos
+  const handleNewLocation = useCallback(async () => {
+    setLoading(true);
+
+    const latitude = Number(lat);
+    const longitude = Number(long);
+    const data = await fetch(`http://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&appid=${TOKEN_APP_WEATHER}&lang=pt_br`)
+    .then(response => response.json())
+    .catch(error => { console.error(error) });
     setUser({
       latitude, longitude,
       name: `${data.name} - ${data.sys.country}`,
@@ -47,7 +61,9 @@ const App = () => {
         urlIcon: `http://openweathermap.org/img/wn/${data.weather[0].icon}@2x.png`,
       }
     });
-  }, [lat, log, setLoading]);
+    // Adicionando delay para fazer uma animação de spinning
+    setTimeout(function(){setLoading(false)}, 1000);
+  }, [lat, long, setLoading]);
 
   return (
     <>
@@ -69,30 +85,36 @@ const App = () => {
             <Input
               ref={logInputRef}
               placeholder="Digite uma logitude"
-              value={log}
-              onChangeText={setLog}
+              value={long}
+              onChangeText={setLong}
               returnKeyType="done"
             />
           </View>
         </ContainerInputs>
 
         <NewLocation onPress={handleNewLocation}>
-          <Text style={{color: '#fff'}}>Atualizar Localização</Text>
+          <Icon
+            name="location-searching"
+            size={18}
+            color="#FFF"
+          />
+          <Text style={{color: '#fff', paddingLeft: 5}}>Atualizar Localização</Text>
         </NewLocation>
+
         {loading ? 
           <View style={{marginTop: 20}}>
             <ActivityIndicator size="large" color="#000" />
-            <TextLoading>Obtendo sua localização</TextLoading>
+            <Text>Obtendo sua localização</Text>
           </View> : <>
           {user && (
               <>
-                <Header>
-                  <IconTemp source={{uri: user.weather.urlIcon}} />
-                  <TextHeader>
+                <Temperature>
+                  <TemperatureIcon source={{uri: user.weather.urlIcon}} />
+                  <View style={{alignItems: 'center'}}>
                     <Text style={{fontSize: 25}}>{user.weather.temperature} °C</Text>
                     <Text style={{color: '#666'}}>({user.weather.description})</Text>
-                  </TextHeader>
-                </Header>
+                  </View>
+                </Temperature>
 
                 <NameLocation>
                   <Icon
